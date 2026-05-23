@@ -79,24 +79,139 @@ const SOUNDS = [
   },
 ];
 
-// Web Audio шум как fallback когда URL недоступны
-function makeNoiseNode(ctx: AudioContext, type: "rain" | "fire" | "wind") {
-  const bufferSize = ctx.sampleRate * 4;
-  const buf = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+// ── Web Audio синтез — каждый звук уникален ────────────────────────────────
 
+function makeWhiteNoise(ctx: AudioContext, seconds = 6) {
+  const n = ctx.sampleRate * seconds;
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.loop = true;
+  return src;
+}
 
-  const filt = ctx.createBiquadFilter();
-  if (type === "rain") { filt.type = "bandpass"; filt.frequency.value = 3000; filt.Q.value = 0.4; }
-  else if (type === "fire") { filt.type = "lowpass"; filt.frequency.value = 500; }
-  else { filt.type = "lowpass"; filt.frequency.value = 250; }
+function makePinkNoise(ctx: AudioContext, seconds = 6) {
+  const n = ctx.sampleRate * seconds;
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
+    b2 = 0.96900 * b2 + w * 0.1538520; b3 = 0.86650 * b3 + w * 0.3104856;
+    b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980;
+    d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  return src;
+}
 
-  src.connect(filt);
-  return { src, filt };
+type SoundType = "rain_roof" | "fire" | "waves" | "forest" | "crickets" | "birds" | "wind" | "rain_forest";
+
+function synthesizeSound(ctx: AudioContext, type: SoundType, gainNode: GainNode) {
+  const nodes: AudioNode[] = [];
+
+  if (type === "rain_roof") {
+    // Дождь по крыше: белый шум + высокочастотный фильтр + редкие капли
+    const noise = makeWhiteNoise(ctx);
+    const hipass = ctx.createBiquadFilter(); hipass.type = "highpass"; hipass.frequency.value = 2800;
+    const bandpass = ctx.createBiquadFilter(); bandpass.type = "bandpass"; bandpass.frequency.value = 4000; bandpass.Q.value = 0.5;
+    noise.connect(hipass); hipass.connect(bandpass); bandpass.connect(gainNode);
+    noise.start();
+    nodes.push(noise, hipass, bandpass);
+  } else if (type === "fire") {
+    // Костёр: розовый шум (глубже) + низкочастотный + LFO качание
+    const noise = makePinkNoise(ctx);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 1.2;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.4;
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = 200;
+    lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
+    noise.connect(lp); lp.connect(gainNode);
+    noise.start(); lfo.start();
+    nodes.push(noise, lp, lfo, lfoGain);
+  } else if (type === "waves") {
+    // Прибой: розовый шум + медленное LFO (волна приходит-уходит)
+    const noise = makePinkNoise(ctx);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
+    const waveGain = ctx.createGain(); waveGain.gain.value = 0.5;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.12;
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.45;
+    lfo.connect(lfoGain); lfoGain.connect(waveGain.gain);
+    noise.connect(lp); lp.connect(waveGain); waveGain.connect(gainNode);
+    noise.start(); lfo.start();
+    nodes.push(noise, lp, waveGain, lfo, lfoGain);
+  } else if (type === "forest") {
+    // Лес: мягкий розовый шум (листва) + резонансный фильтр
+    const noise = makePinkNoise(ctx);
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1200; bp.Q.value = 0.3;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2000;
+    noise.connect(bp); bp.connect(lp); lp.connect(gainNode);
+    noise.start();
+    nodes.push(noise, bp, lp);
+  } else if (type === "crickets") {
+    // Сверчки: несколько осцилляторов на разных частотах с тремоло
+    [3800, 4200, 4600].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = freq;
+      const trem = ctx.createOscillator(); trem.frequency.value = 18 + idx * 2;
+      const tremGain = ctx.createGain(); tremGain.gain.value = 0.5;
+      const oscGain = ctx.createGain(); oscGain.gain.value = 0.08;
+      trem.connect(tremGain); tremGain.connect(oscGain.gain);
+      osc.connect(oscGain); oscGain.connect(gainNode);
+      osc.start(); trem.start();
+      nodes.push(osc, trem, tremGain, oscGain);
+    });
+  } else if (type === "birds") {
+    // Птицы: периодические синусоиды разной высоты (чириканье)
+    const scheduleChirp = () => {
+      const freq = 2000 + Math.random() * 2000;
+      const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = freq;
+      const env = ctx.createGain(); env.gain.value = 0;
+      osc.connect(env); env.connect(gainNode);
+      const t = ctx.currentTime;
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(0.15, t + 0.05);
+      env.gain.linearRampToValueAtTime(0, t + 0.2);
+      osc.start(t); osc.stop(t + 0.25);
+      setTimeout(scheduleChirp, 300 + Math.random() * 2000);
+    };
+    scheduleChirp();
+    // Фоновый лесной шум
+    const ambient = makePinkNoise(ctx);
+    const lp = ctx.createBiquadFilter(); lp.type = "bandpass"; lp.frequency.value = 1500; lp.Q.value = 0.4;
+    const ag = ctx.createGain(); ag.gain.value = 0.3;
+    ambient.connect(lp); lp.connect(ag); ag.connect(gainNode);
+    ambient.start();
+    nodes.push(ambient, lp, ag);
+  } else if (type === "wind") {
+    // Ветер: белый шум очень низкий + плавное LFO
+    const noise = makeWhiteNoise(ctx);
+    const lp1 = ctx.createBiquadFilter(); lp1.type = "lowpass"; lp1.frequency.value = 400;
+    const lp2 = ctx.createBiquadFilter(); lp2.type = "lowpass"; lp2.frequency.value = 600;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 150;
+    lfo.connect(lfoG); lfoG.connect(lp2.frequency);
+    noise.connect(lp1); lp1.connect(lp2); lp2.connect(gainNode);
+    noise.start(); lfo.start();
+    nodes.push(noise, lp1, lp2, lfo, lfoG);
+  } else if (type === "rain_forest") {
+    // Дождь в лесу: белый шум (дождь) + розовый шум (листья) + низкие частоты
+    const rainNoise = makeWhiteNoise(ctx);
+    const leafNoise = makePinkNoise(ctx);
+    const rFilter = ctx.createBiquadFilter(); rFilter.type = "bandpass"; rFilter.frequency.value = 3500; rFilter.Q.value = 0.6;
+    const lFilter = ctx.createBiquadFilter(); lFilter.type = "bandpass"; lFilter.frequency.value = 1000; lFilter.Q.value = 0.4;
+    const rg = ctx.createGain(); rg.gain.value = 0.6;
+    const lg = ctx.createGain(); lg.gain.value = 0.4;
+    rainNoise.connect(rFilter); rFilter.connect(rg); rg.connect(gainNode);
+    leafNoise.connect(lFilter); lFilter.connect(lg); lg.connect(gainNode);
+    rainNoise.start(); leafNoise.start();
+    nodes.push(rainNoise, leafNoise, rFilter, lFilter, rg, lg);
+  }
+
+  return nodes;
 }
 
 const QUOTES = [
@@ -129,34 +244,51 @@ function useFavorites(key: string) {
   return { favorites, toggle, isFav };
 }
 
-// ── Анимация травы ─────────────────────────────────────────────────────────
-function GrassAnimation() {
-  const blades = useRef(
-    Array.from({ length: 36 }, (_, i) => ({
-      left: (i / 35) * 100,
-      height: 30 + Math.random() * 42,
-      delay: (i * 0.09) % 2.4,
-      dur: 1.6 + Math.random() * 1.0,
-      width: 1.5 + Math.random() * 2,
-      green: 138 + Math.floor(Math.random() * 25),
-      sat: 22 + Math.floor(Math.random() * 18),
-      light: 38 + Math.floor(Math.random() * 18),
-      opacity: 0.55 + Math.random() * 0.4,
-    }))
-  );
+// ── Анимация воды (волны SVG) ──────────────────────────────────────────────
+function WaterRipple({ height = 72, colors = ["#a8d4e2", "#7ab8c8", "#5aa0b0"] }: { height?: number; colors?: string[] }) {
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 64, marginBottom: -2 }}>
-      {blades.current.map((b, i) => (
+    <div className="relative w-full overflow-hidden rounded-2xl" style={{ height }}>
+      {/* Фон воды */}
+      <div
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(180deg, ${colors[0]}55 0%, ${colors[1]}88 50%, ${colors[2]}aa 100%)` }}
+      />
+      {/* Волны SVG */}
+      {[0, 1, 2].map(i => (
+        <svg
+          key={i}
+          className="absolute bottom-0 w-full"
+          style={{
+            height: height * 0.75,
+            animation: `waveMove ${4 + i * 1.5}s ease-in-out ${i * 0.8}s infinite`,
+            opacity: 0.55 - i * 0.12,
+          }}
+          viewBox="0 0 400 60"
+          preserveAspectRatio="none"
+        >
+          <path
+            d={i === 0
+              ? "M0,30 C50,10 100,50 150,30 C200,10 250,50 300,30 C350,10 400,50 400,30 L400,60 L0,60 Z"
+              : i === 1
+              ? "M0,35 C60,15 120,55 180,35 C240,15 300,55 360,35 C380,25 400,40 400,35 L400,60 L0,60 Z"
+              : "M0,40 C70,20 140,55 210,38 C280,20 340,55 400,38 L400,60 L0,60 Z"
+            }
+            fill={colors[i]}
+          />
+        </svg>
+      ))}
+      {/* Блики */}
+      {[0, 1, 2, 3].map(i => (
         <div
           key={i}
-          className="absolute bottom-0 rounded-full"
+          className="absolute rounded-full"
           style={{
-            left: `${b.left}%`,
-            width: b.width,
-            height: b.height,
-            background: `hsl(${b.green} ${b.sat}% ${b.light}% / ${b.opacity})`,
-            transformOrigin: "bottom center",
-            animation: `grassWave ${b.dur}s ease-in-out ${b.delay}s infinite`,
+            height: 1.5,
+            width: `${30 + i * 12}%`,
+            background: "rgba(255,255,255,0.5)",
+            top: `${18 + i * 16}%`,
+            left: `${5 + i * 8}%`,
+            animation: `shimmer ${3 + i * 0.9}s ease-in-out ${i * 0.4}s infinite`,
           }}
         />
       ))}
@@ -164,29 +296,9 @@ function GrassAnimation() {
   );
 }
 
-// ── Анимация воды ──────────────────────────────────────────────────────────
+// WaterAnimation — компактная версия для главной
 function WaterAnimation() {
-  return (
-    <div
-      className="relative w-full rounded-2xl overflow-hidden"
-      style={{ height: 40, background: "linear-gradient(180deg, #b8dce8 0%, #7ab8c4 100%)" }}
-    >
-      {[0, 1, 2, 3].map(i => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            height: 2,
-            width: `${55 + i * 15}%`,
-            background: "rgba(255,255,255,0.3)",
-            top: `${15 + i * 20}%`,
-            left: 0,
-            animation: `waterFlow ${2.8 + i * 0.8}s linear ${i * 0.6}s infinite`,
-          }}
-        />
-      ))}
-    </div>
-  );
+  return <WaterRipple height={48} />;
 }
 
 // ── Главная ────────────────────────────────────────────────────────────────
@@ -257,101 +369,67 @@ function HomePage() {
         </div>
       </div>
 
-      {/* Цитата + трава */}
+      {/* Цитата + вода */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="px-5 pt-5 pb-2 text-center space-y-1">
-          <p className="font-display text-lg italic" style={{ color: "#6a7e6c" }}>
+        <div className="px-5 pt-5 pb-3 text-center space-y-1">
+          <p className="font-display text-lg italic" style={{ color: "#3a5040" }}>
             "Природа не торопится, и всё же всё успевает."
           </p>
-          <p className="font-body text-xs" style={{ color: "#b0baa8" }}>— Лао-цзы</p>
+          <p className="font-body text-xs font-medium" style={{ color: "#6a8070" }}>— Лао-цзы</p>
         </div>
-        <GrassAnimation />
+        <WaterRipple height={56} colors={["#c2e0ea", "#8cc4d0", "#6aaaba"]} />
       </div>
     </div>
   );
 }
 
 // ── Звуки ──────────────────────────────────────────────────────────────────
-type AudioHandle = { type: "html"; el: HTMLAudioElement } | { type: "noise"; ctx: AudioContext; gain: GainNode; src: AudioBufferSourceNode };
+type SynthHandle = { ctx: AudioContext; gain: GainNode; nodes: AudioNode[] };
 
 function SoundsPage() {
-  const handles = useRef<Record<string, AudioHandle>>({});
+  const handles = useRef<Record<string, SynthHandle>>({});
   const [active, setActive] = useState<Record<string, boolean>>({});
   const [volumes, setVolumes] = useState<Record<string, number>>(
-    Object.fromEntries(SOUNDS.map(s => [s.id, 0.7]))
+    Object.fromEntries(SOUNDS.map(s => [s.id, 0.65]))
   );
 
   const stopOne = useCallback((id: string, updateState = false) => {
     const h = handles.current[id];
     if (h) {
-      if (h.type === "html") { try { h.el.pause(); h.el.src = ""; } catch (_) { /* ignore */ } }
-      else { try { h.src.stop(); } catch (_) { /* ignore */ } try { h.ctx.close(); } catch (_) { /* ignore */ } }
+      h.nodes.forEach(n => { try { (n as AudioBufferSourceNode).stop?.(); } catch (_) { /* ignore */ } });
+      try { h.ctx.close(); } catch (_) { /* ignore */ }
       delete handles.current[id];
     }
     if (updateState) setActive(prev => ({ ...prev, [id]: false }));
   }, []);
 
-  const playFallbackNoise = useCallback((id: string, vol: number) => {
+  const playSound = useCallback((sound: typeof SOUNDS[0], vol: number) => {
     try {
       const ctx = new AudioContext();
-      const noiseType = ["rain_roof", "rain_forest"].includes(id) ? "rain" : id === "fire" ? "fire" : "wind";
-      const { src, filt } = makeNoiseNode(ctx, noiseType);
       const gain = ctx.createGain();
-      gain.gain.value = vol * 0.25;
-      filt.connect(gain);
+      gain.gain.value = vol * 0.4;
       gain.connect(ctx.destination);
-      src.start();
-      handles.current[id] = { type: "noise", ctx, gain, src };
-      setActive(prev => ({ ...prev, [id]: true }));
+      const nodes = synthesizeSound(ctx, sound.id as SoundType, gain);
+      handles.current[sound.id] = { ctx, gain, nodes };
+      setActive(prev => ({ ...prev, [sound.id]: true }));
     } catch (_) {
-      // тихий fail
+      // fail silently
     }
   }, []);
 
-  const tryPlayUrls = useCallback(async (id: string, urls: string[], vol: number): Promise<boolean> => {
-    for (const url of urls) {
-      try {
-        const el = new Audio();
-        el.crossOrigin = "anonymous";
-        el.loop = true;
-        el.volume = vol;
-        el.src = url;
-
-        await new Promise<void>((res, rej) => {
-          const t = setTimeout(() => rej(new Error("timeout")), 4000);
-          el.oncanplaythrough = () => { clearTimeout(t); res(); };
-          el.onerror = () => { clearTimeout(t); rej(new Error("error")); };
-          el.load();
-        });
-
-        await el.play();
-        handles.current[id] = { type: "html", el };
-        setActive(prev => ({ ...prev, [id]: true }));
-        return true;
-      } catch (_) {
-        continue;
-      }
-    }
-    return false;
-  }, []);
-
-  const toggleSound = useCallback(async (sound: typeof SOUNDS[0]) => {
-    const { id, urls } = sound;
+  const toggleSound = useCallback((sound: typeof SOUNDS[0]) => {
+    const { id } = sound;
     if (active[id]) {
       stopOne(id, true);
     } else {
-      const vol = volumes[id];
-      const ok = await tryPlayUrls(id, urls, vol);
-      if (!ok) playFallbackNoise(id, vol);
+      playSound(sound, volumes[id]);
     }
-  }, [active, volumes, stopOne, tryPlayUrls, playFallbackNoise]);
+  }, [active, volumes, stopOne, playSound]);
 
   const changeVolume = useCallback((id: string, vol: number) => {
     setVolumes(prev => ({ ...prev, [id]: vol }));
     const h = handles.current[id];
-    if (!h) return;
-    if (h.type === "html") h.el.volume = vol;
-    else h.gain.gain.value = vol * 0.25;
+    if (h) h.gain.gain.value = vol * 0.4;
   }, []);
 
   const stopAll = useCallback(() => {
@@ -448,7 +526,7 @@ function SoundsPage() {
         </button>
       )}
 
-      <GrassAnimation />
+      <WaterRipple height={64} colors={["#b8dce8", "#7ab8c4", "#5a9aae"]} />
     </div>
   );
 }
@@ -468,14 +546,14 @@ function QuotesPage() {
         <p className="font-body text-xs" style={{ color: "#b0baa8" }}>слова, которые успокаивают</p>
       </div>
 
-      <div className="glass rounded-3xl p-7 space-y-5">
+      <div className="rounded-3xl p-7 space-y-5" style={{ background: "rgba(245,250,246,0.92)", border: "1px solid rgba(122,184,138,0.2)" }}>
         <div className="space-y-3">
-          <span className="font-display text-5xl leading-none block" style={{ color: "#7ab88a", opacity: 0.5 }}>"</span>
-          <p className="font-display text-2xl font-light italic leading-relaxed" style={{ color: "#2e3d30" }}>
+          <span className="font-display text-5xl leading-none block" style={{ color: "#7ab88a", opacity: 0.6 }}>"</span>
+          <p className="font-display text-2xl leading-relaxed" style={{ color: "#1a2a1e", fontStyle: "italic", fontWeight: 400 }}>
             {quote.text}
           </p>
           {quote.author && (
-            <p className="font-body text-sm text-right font-medium" style={{ color: "#5a6e5c" }}>— {quote.author}</p>
+            <p className="font-body text-sm text-right font-semibold" style={{ color: "#3a5040" }}>— {quote.author}</p>
           )}
         </div>
         <div className="flex items-center justify-between">
@@ -517,15 +595,18 @@ function QuotesPage() {
         </button>
       </div>
 
-      <div className="space-y-3">
-        <p className="font-body text-xs tracking-[0.2em] uppercase" style={{ color: "#8a9888" }}>Все фразы</p>
+      <div className="space-y-2.5">
+        <p className="font-body text-xs tracking-[0.2em] uppercase font-semibold" style={{ color: "#6a8070" }}>Все фразы</p>
         {QUOTES.map((q, i) => (
           <div key={q.id} onClick={() => setCurrent(i)}
-            className="glass rounded-2xl p-4 cursor-pointer transition-all duration-200"
-            style={i === current ? { boxShadow: "0 0 0 1.5px rgba(122,184,138,0.5)" } : { opacity: 0.72 }}
+            className="rounded-2xl p-4 cursor-pointer transition-all duration-200"
+            style={i === current
+              ? { background: "rgba(240,248,242,0.95)", boxShadow: "0 0 0 1.5px rgba(122,184,138,0.55)", border: "1px solid transparent" }
+              : { background: "rgba(255,255,255,0.55)", opacity: 0.78 }
+            }
           >
-            <p className="font-display text-sm italic leading-relaxed" style={{ color: "#2e3d30" }}>"{q.text}"</p>
-            {q.author && <p className="font-body text-xs mt-1 font-medium" style={{ color: "#5a6e5c" }}>— {q.author}</p>}
+            <p className="font-display text-sm italic leading-relaxed" style={{ color: "#1a2a1e" }}>"{q.text}"</p>
+            {q.author && <p className="font-body text-xs mt-1 font-semibold" style={{ color: "#3a5040" }}>— {q.author}</p>}
           </div>
         ))}
       </div>
@@ -591,11 +672,16 @@ const Index = () => {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${BG[tab]} transition-all duration-700`}>
       <style>{`
-        @keyframes grassWave {
-          0%   { transform: rotate(-7deg) scaleY(1); }
-          30%  { transform: rotate(6deg) scaleY(0.97); }
-          60%  { transform: rotate(-4deg) scaleY(1.01); }
-          100% { transform: rotate(-7deg) scaleY(1); }
+        @keyframes waveMove {
+          0%   { transform: translateX(0); }
+          50%  { transform: translateX(-6%); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes shimmer {
+          0%   { transform: translateX(-20px); opacity: 0; }
+          30%  { opacity: 0.6; }
+          70%  { opacity: 0.6; }
+          100% { transform: translateX(40px); opacity: 0; }
         }
         @keyframes waterFlow {
           0% { transform: translateX(-110%); opacity: 0; }
