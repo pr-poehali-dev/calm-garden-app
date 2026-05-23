@@ -132,18 +132,20 @@ function useFavorites(key: string) {
 // ── Анимация травы ─────────────────────────────────────────────────────────
 function GrassAnimation() {
   const blades = useRef(
-    Array.from({ length: 20 }, (_, i) => ({
-      left: (i / 19) * 100,
-      height: 24 + Math.random() * 30,
-      delay: (i * 0.15) % 2.5,
-      dur: 2.0 + Math.random() * 1.2,
-      width: Math.random() > 0.5 ? 2 : 1.5,
-      green: 140 + Math.floor(Math.random() * 20),
-      light: 42 + Math.floor(Math.random() * 16),
+    Array.from({ length: 36 }, (_, i) => ({
+      left: (i / 35) * 100,
+      height: 30 + Math.random() * 42,
+      delay: (i * 0.09) % 2.4,
+      dur: 1.6 + Math.random() * 1.0,
+      width: 1.5 + Math.random() * 2,
+      green: 138 + Math.floor(Math.random() * 25),
+      sat: 22 + Math.floor(Math.random() * 18),
+      light: 38 + Math.floor(Math.random() * 18),
+      opacity: 0.55 + Math.random() * 0.4,
     }))
   );
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 52, marginBottom: -2 }}>
+    <div className="relative w-full overflow-hidden" style={{ height: 64, marginBottom: -2 }}>
       {blades.current.map((b, i) => (
         <div
           key={i}
@@ -152,7 +154,7 @@ function GrassAnimation() {
             left: `${b.left}%`,
             width: b.width,
             height: b.height,
-            background: `hsl(${b.green} 28% ${b.light}% / 0.65)`,
+            background: `hsl(${b.green} ${b.sat}% ${b.light}% / ${b.opacity})`,
             transformOrigin: "bottom center",
             animation: `grassWave ${b.dur}s ease-in-out ${b.delay}s infinite`,
           }}
@@ -279,12 +281,14 @@ function SoundsPage() {
     Object.fromEntries(SOUNDS.map(s => [s.id, 0.7]))
   );
 
-  const stopOne = useCallback((id: string) => {
+  const stopOne = useCallback((id: string, updateState = false) => {
     const h = handles.current[id];
-    if (!h) return;
-    if (h.type === "html") { h.el.pause(); h.el.src = ""; }
-    else { try { h.src.stop(); h.ctx.close(); } catch (_) { /* ignore */ } }
-    delete handles.current[id];
+    if (h) {
+      if (h.type === "html") { try { h.el.pause(); h.el.src = ""; } catch (_) { /* ignore */ } }
+      else { try { h.src.stop(); } catch (_) { /* ignore */ } try { h.ctx.close(); } catch (_) { /* ignore */ } }
+      delete handles.current[id];
+    }
+    if (updateState) setActive(prev => ({ ...prev, [id]: false }));
   }, []);
 
   const playFallbackNoise = useCallback((id: string, vol: number) => {
@@ -334,8 +338,7 @@ function SoundsPage() {
   const toggleSound = useCallback(async (sound: typeof SOUNDS[0]) => {
     const { id, urls } = sound;
     if (active[id]) {
-      stopOne(id);
-      setActive(prev => ({ ...prev, [id]: false }));
+      stopOne(id, true);
     } else {
       const vol = volumes[id];
       const ok = await tryPlayUrls(id, urls, vol);
@@ -351,13 +354,13 @@ function SoundsPage() {
     else h.gain.gain.value = vol * 0.25;
   }, []);
 
-  const stopAll = () => {
-    SOUNDS.forEach(s => stopOne(s.id));
+  const stopAll = useCallback(() => {
+    SOUNDS.forEach(s => stopOne(s.id, false));
     setActive({});
-  };
+  }, [stopOne]);
 
   useEffect(() => {
-    return () => { SOUNDS.forEach(s => stopOne(s.id)); };
+    return () => { SOUNDS.forEach(s => stopOne(s.id, false)); };
   }, [stopOne]);
 
   const activeCount = Object.values(active).filter(Boolean).length;
@@ -467,12 +470,12 @@ function QuotesPage() {
 
       <div className="glass rounded-3xl p-7 space-y-5">
         <div className="space-y-3">
-          <span className="font-display text-5xl leading-none block" style={{ color: "#7ab88a", opacity: 0.4 }}>"</span>
-          <p className="font-display text-xl font-light italic leading-relaxed" style={{ color: "#5a6e5c" }}>
+          <span className="font-display text-5xl leading-none block" style={{ color: "#7ab88a", opacity: 0.5 }}>"</span>
+          <p className="font-display text-2xl font-light italic leading-relaxed" style={{ color: "#2e3d30" }}>
             {quote.text}
           </p>
           {quote.author && (
-            <p className="font-body text-xs text-right" style={{ color: "#b0baa8" }}>— {quote.author}</p>
+            <p className="font-body text-sm text-right font-medium" style={{ color: "#5a6e5c" }}>— {quote.author}</p>
           )}
         </div>
         <div className="flex items-center justify-between">
@@ -515,14 +518,14 @@ function QuotesPage() {
       </div>
 
       <div className="space-y-3">
-        <p className="font-body text-xs tracking-[0.2em] uppercase" style={{ color: "#b0baa8" }}>Все фразы</p>
+        <p className="font-body text-xs tracking-[0.2em] uppercase" style={{ color: "#8a9888" }}>Все фразы</p>
         {QUOTES.map((q, i) => (
           <div key={q.id} onClick={() => setCurrent(i)}
             className="glass rounded-2xl p-4 cursor-pointer transition-all duration-200"
-            style={i === current ? { boxShadow: "0 0 0 1.5px rgba(122,184,138,0.4)" } : { opacity: 0.65 }}
+            style={i === current ? { boxShadow: "0 0 0 1.5px rgba(122,184,138,0.5)" } : { opacity: 0.72 }}
           >
-            <p className="font-display text-sm italic leading-relaxed" style={{ color: "#5a6e5c" }}>"{q.text}"</p>
-            {q.author && <p className="font-body text-xs mt-1" style={{ color: "#b0baa8" }}>— {q.author}</p>}
+            <p className="font-display text-sm italic leading-relaxed" style={{ color: "#2e3d30" }}>"{q.text}"</p>
+            {q.author && <p className="font-body text-xs mt-1 font-medium" style={{ color: "#5a6e5c" }}>— {q.author}</p>}
           </div>
         ))}
       </div>
@@ -589,8 +592,10 @@ const Index = () => {
     <div className={`min-h-screen bg-gradient-to-br ${BG[tab]} transition-all duration-700`}>
       <style>{`
         @keyframes grassWave {
-          0%, 100% { transform: rotate(-5deg) scaleY(1); }
-          50% { transform: rotate(5deg) scaleY(0.95); }
+          0%   { transform: rotate(-7deg) scaleY(1); }
+          30%  { transform: rotate(6deg) scaleY(0.97); }
+          60%  { transform: rotate(-4deg) scaleY(1.01); }
+          100% { transform: rotate(-7deg) scaleY(1); }
         }
         @keyframes waterFlow {
           0% { transform: translateX(-110%); opacity: 0; }
