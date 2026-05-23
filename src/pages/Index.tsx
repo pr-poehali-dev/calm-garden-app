@@ -9,9 +9,10 @@ const SOUNDS = [
     label: "Дождь по крыше",
     img: `${CDN}/ea9d4382-977c-4550-b8ff-7f9e60c54d25.jpg`,
     color: "#8fb8d0",
+    // Прямые ссылки freesound.org (CC0 лицензия, превью доступны без авторизации)
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3",
-      "https://www.soundjay.com/nature/rain-01.mp3",
+      "https://freesound.org/data/previews/531/531947_11861866-lq.mp3",
+      "https://freesound.org/data/previews/204/204966_1612429-lq.mp3",
     ],
   },
   {
@@ -20,7 +21,8 @@ const SOUNDS = [
     img: `${CDN}/4043917e-7ddb-4efa-8907-f10cb5b43d2a.jpg`,
     color: "#d4956a",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/1399/1399-preview.mp3",
+      "https://freesound.org/data/previews/404/404357_5121236-lq.mp3",
+      "https://freesound.org/data/previews/543/543687_3797507-lq.mp3",
     ],
   },
   {
@@ -29,7 +31,8 @@ const SOUNDS = [
     img: `${CDN}/89f731ab-a059-4a4a-8aa2-e026c781f727.jpg`,
     color: "#7ab8c4",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2516/2516-preview.mp3",
+      "https://freesound.org/data/previews/362/362528_6629901-lq.mp3",
+      "https://freesound.org/data/previews/402/402543_5121236-lq.mp3",
     ],
   },
   {
@@ -38,16 +41,18 @@ const SOUNDS = [
     img: `${CDN}/edb816aa-7b73-478b-9e18-2c71de591d3b.jpg`,
     color: "#7ab88a",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2517/2517-preview.mp3",
+      "https://freesound.org/data/previews/496/496846_11235861-lq.mp3",
+      "https://freesound.org/data/previews/476/476848_9676595-lq.mp3",
     ],
   },
   {
-    id: "crickets",
-    label: "Сверчки",
+    id: "night",
+    label: "Ночь",
     img: `${CDN}/3f99d082-fc42-4ee0-9267-275d24830503.jpg`,
-    color: "#a8b87a",
+    color: "#8890b8",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2520/2520-preview.mp3",
+      "https://freesound.org/data/previews/484/484039_10574267-lq.mp3",
+      "https://freesound.org/data/previews/521/521975_11235861-lq.mp3",
     ],
   },
   {
@@ -56,7 +61,8 @@ const SOUNDS = [
     img: `${CDN}/2be4a871-044f-473d-88b3-1cbeab247d18.jpg`,
     color: "#c4a87a",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2518/2518-preview.mp3",
+      "https://freesound.org/data/previews/476/476848_9676595-lq.mp3",
+      "https://freesound.org/data/previews/400/400926_5121236-lq.mp3",
     ],
   },
   {
@@ -65,7 +71,8 @@ const SOUNDS = [
     img: `${CDN}/4dafa7bf-6ccd-4127-aafd-48418133682b.jpg`,
     color: "#a0b8c4",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2519/2519-preview.mp3",
+      "https://freesound.org/data/previews/476/476562_9676595-lq.mp3",
+      "https://freesound.org/data/previews/348/348545_5122493-lq.mp3",
     ],
   },
   {
@@ -74,25 +81,24 @@ const SOUNDS = [
     img: `${CDN}/3399eea0-b201-49e7-a54f-ce6f3f3af54c.jpg`,
     color: "#6aa888",
     urls: [
-      "https://assets.mixkit.co/active_storage/sfx/2524/2524-preview.mp3",
+      "https://freesound.org/data/previews/346/346170_5450487-lq.mp3",
+      "https://freesound.org/data/previews/612/612026_1648170-lq.mp3",
     ],
   },
 ];
 
 // ── Web Audio синтез — каждый звук уникален ────────────────────────────────
 
-function makeWhiteNoise(ctx: AudioContext, seconds = 6) {
+function makeWhiteNoise(ctx: AudioContext, seconds = 8) {
   const n = ctx.sampleRate * seconds;
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.loop = true;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
   return src;
 }
 
-function makePinkNoise(ctx: AudioContext, seconds = 6) {
+function makePinkNoise(ctx: AudioContext, seconds = 8) {
   const n = ctx.sampleRate * seconds;
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = buf.getChannelData(0);
@@ -104,117 +110,167 @@ function makePinkNoise(ctx: AudioContext, seconds = 6) {
     b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980;
     d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
   }
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.loop = true;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
   return src;
 }
 
-type SoundType = "rain_roof" | "fire" | "waves" | "forest" | "crickets" | "birds" | "wind" | "rain_forest";
+// Коричневый (красный) шум — самый тёплый и низкий
+function makeBrownNoise(ctx: AudioContext, seconds = 8) {
+  const n = ctx.sampleRate * seconds;
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    last = (last + 0.02 * w) / 1.02;
+    d[i] = last * 3.5;
+  }
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+  return src;
+}
+
+type SoundType = "rain_roof" | "fire" | "waves" | "forest" | "night" | "birds" | "wind" | "rain_forest";
 
 function synthesizeSound(ctx: AudioContext, type: SoundType, gainNode: GainNode) {
   const nodes: AudioNode[] = [];
 
   if (type === "rain_roof") {
-    // Дождь по крыше: белый шум + высокочастотный фильтр + редкие капли
+    // Дождь по крыше: белый шум + два фильтра
     const noise = makeWhiteNoise(ctx);
-    const hipass = ctx.createBiquadFilter(); hipass.type = "highpass"; hipass.frequency.value = 2800;
-    const bandpass = ctx.createBiquadFilter(); bandpass.type = "bandpass"; bandpass.frequency.value = 4000; bandpass.Q.value = 0.5;
-    noise.connect(hipass); hipass.connect(bandpass); bandpass.connect(gainNode);
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2000;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 3800; bp.Q.value = 0.6;
+    noise.connect(hp); hp.connect(bp); bp.connect(gainNode);
     noise.start();
-    nodes.push(noise, hipass, bandpass);
+    nodes.push(noise, hp, bp);
+
   } else if (type === "fire") {
-    // Костёр: розовый шум (глубже) + низкочастотный + LFO качание
-    const noise = makePinkNoise(ctx);
-    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 1.2;
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.4;
-    const lfoGain = ctx.createGain(); lfoGain.gain.value = 200;
-    lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
-    noise.connect(lp); lp.connect(gainNode);
-    noise.start(); lfo.start();
-    nodes.push(noise, lp, lfo, lfoGain);
+    // Костёр: коричневый шум (потрескивание) + розовый (шум огня) + LFO
+    const brown = makeBrownNoise(ctx);
+    const pink = makePinkNoise(ctx);
+    const lp1 = ctx.createBiquadFilter(); lp1.type = "lowpass"; lp1.frequency.value = 800; lp1.Q.value = 0.8;
+    const lp2 = ctx.createBiquadFilter(); lp2.type = "lowpass"; lp2.frequency.value = 1200;
+    // Мерцание огня через LFO
+    const lfo1 = ctx.createOscillator(); lfo1.frequency.value = 0.6; lfo1.type = "sine";
+    const lfo2 = ctx.createOscillator(); lfo2.frequency.value = 1.4; lfo2.type = "sine";
+    const lfoG1 = ctx.createGain(); lfoG1.gain.value = 0.12;
+    const lfoG2 = ctx.createGain(); lfoG2.gain.value = 0.06;
+    const gBrown = ctx.createGain(); gBrown.gain.value = 0.7;
+    const gPink = ctx.createGain(); gPink.gain.value = 0.3;
+    lfo1.connect(lfoG1); lfoG1.connect(gBrown.gain);
+    lfo2.connect(lfoG2); lfoG2.connect(gPink.gain);
+    brown.connect(lp1); lp1.connect(gBrown); gBrown.connect(gainNode);
+    pink.connect(lp2); lp2.connect(gPink); gPink.connect(gainNode);
+    brown.start(); pink.start(); lfo1.start(); lfo2.start();
+    nodes.push(brown, pink, lp1, lp2, lfo1, lfo2, lfoG1, lfoG2, gBrown, gPink);
+
   } else if (type === "waves") {
-    // Прибой: розовый шум + медленное LFO (волна приходит-уходит)
-    const noise = makePinkNoise(ctx);
-    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
-    const waveGain = ctx.createGain(); waveGain.gain.value = 0.5;
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.12;
-    const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.45;
-    lfo.connect(lfoGain); lfoGain.connect(waveGain.gain);
-    noise.connect(lp); lp.connect(waveGain); waveGain.connect(gainNode);
-    noise.start(); lfo.start();
-    nodes.push(noise, lp, waveGain, lfo, lfoGain);
+    // Прибой: коричневый шум + медленное LFO (волны накатывают)
+    const brown = makeBrownNoise(ctx);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1200;
+    const wg = ctx.createGain(); wg.gain.value = 0.5;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.1; lfo.type = "sine";
+    const lfoG = ctx.createGain(); lfoG.gain.value = 0.45;
+    lfo.connect(lfoG); lfoG.connect(wg.gain);
+    brown.connect(lp); lp.connect(wg); wg.connect(gainNode);
+    brown.start(); lfo.start();
+    nodes.push(brown, lp, wg, lfo, lfoG);
+
   } else if (type === "forest") {
-    // Лес: мягкий розовый шум (листва) + резонансный фильтр
-    const noise = makePinkNoise(ctx);
-    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1200; bp.Q.value = 0.3;
-    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2000;
-    noise.connect(bp); bp.connect(lp); lp.connect(gainNode);
-    noise.start();
-    nodes.push(noise, bp, lp);
-  } else if (type === "crickets") {
-    // Сверчки: несколько осцилляторов на разных частотах с тремоло
-    [3800, 4200, 4600].forEach((freq, idx) => {
-      const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = freq;
-      const trem = ctx.createOscillator(); trem.frequency.value = 18 + idx * 2;
-      const tremGain = ctx.createGain(); tremGain.gain.value = 0.5;
-      const oscGain = ctx.createGain(); oscGain.gain.value = 0.08;
-      trem.connect(tremGain); tremGain.connect(oscGain.gain);
-      osc.connect(oscGain); oscGain.connect(gainNode);
-      osc.start(); trem.start();
-      nodes.push(osc, trem, tremGain, oscGain);
-    });
-  } else if (type === "birds") {
-    // Птицы: периодические синусоиды разной высоты (чириканье)
-    const scheduleChirp = () => {
-      const freq = 2000 + Math.random() * 2000;
-      const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = freq;
+    // Лес: розовый + коричневый шум (листва + гул деревьев)
+    const pink = makePinkNoise(ctx);
+    const brown = makeBrownNoise(ctx);
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1000; bp.Q.value = 0.35;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 600;
+    const gp = ctx.createGain(); gp.gain.value = 0.65;
+    const gb = ctx.createGain(); gb.gain.value = 0.35;
+    pink.connect(bp); bp.connect(gp); gp.connect(gainNode);
+    brown.connect(lp); lp.connect(gb); gb.connect(gainNode);
+    pink.start(); brown.start();
+    nodes.push(pink, brown, bp, lp, gp, gb);
+
+  } else if (type === "night") {
+    // Ночной амбиент: коричневый (тишина) + редкие глубокие тоны
+    const brown = makeBrownNoise(ctx);
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 300;
+    const gb = ctx.createGain(); gb.gain.value = 0.4;
+    brown.connect(lp); lp.connect(gb); gb.connect(gainNode);
+    brown.start();
+    // Редкие низкие тона (как вдалеке)
+    const schedTone = () => {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      osc.frequency.value = 80 + Math.random() * 60;
       const env = ctx.createGain(); env.gain.value = 0;
       osc.connect(env); env.connect(gainNode);
       const t = ctx.currentTime;
       env.gain.setValueAtTime(0, t);
-      env.gain.linearRampToValueAtTime(0.15, t + 0.05);
-      env.gain.linearRampToValueAtTime(0, t + 0.2);
-      osc.start(t); osc.stop(t + 0.25);
-      setTimeout(scheduleChirp, 300 + Math.random() * 2000);
+      env.gain.linearRampToValueAtTime(0.04, t + 1.5);
+      env.gain.linearRampToValueAtTime(0, t + 4);
+      osc.start(t); osc.stop(t + 5);
+      setTimeout(schedTone, 4000 + Math.random() * 6000);
     };
-    scheduleChirp();
-    // Фоновый лесной шум
+    schedTone();
+    nodes.push(brown, lp, gb);
+
+  } else if (type === "birds") {
+    // Утренние птицы: розовый (лес) + синтетическое чириканье
     const ambient = makePinkNoise(ctx);
-    const lp = ctx.createBiquadFilter(); lp.type = "bandpass"; lp.frequency.value = 1500; lp.Q.value = 0.4;
-    const ag = ctx.createGain(); ag.gain.value = 0.3;
+    const lp = ctx.createBiquadFilter(); lp.type = "bandpass"; lp.frequency.value = 1400; lp.Q.value = 0.4;
+    const ag = ctx.createGain(); ag.gain.value = 0.28;
     ambient.connect(lp); lp.connect(ag); ag.connect(gainNode);
     ambient.start();
+    const schedChirp = () => {
+      const baseFreq = 1800 + Math.random() * 1800;
+      const numNotes = 2 + Math.floor(Math.random() * 3);
+      for (let ni = 0; ni < numNotes; ni++) {
+        const osc = ctx.createOscillator(); osc.type = "sine";
+        osc.frequency.value = baseFreq + ni * 200 * (Math.random() > 0.5 ? 1 : -1);
+        const env = ctx.createGain(); env.gain.value = 0;
+        osc.connect(env); env.connect(gainNode);
+        const t = ctx.currentTime + ni * 0.12;
+        env.gain.setValueAtTime(0, t);
+        env.gain.linearRampToValueAtTime(0.12, t + 0.04);
+        env.gain.linearRampToValueAtTime(0, t + 0.14);
+        osc.start(t); osc.stop(t + 0.2);
+      }
+      setTimeout(schedChirp, 600 + Math.random() * 3000);
+    };
+    schedChirp();
     nodes.push(ambient, lp, ag);
+
   } else if (type === "wind") {
-    // Ветер: белый шум очень низкий + плавное LFO
-    const noise = makeWhiteNoise(ctx);
-    const lp1 = ctx.createBiquadFilter(); lp1.type = "lowpass"; lp1.frequency.value = 400;
-    const lp2 = ctx.createBiquadFilter(); lp2.type = "lowpass"; lp2.frequency.value = 600;
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
-    const lfoG = ctx.createGain(); lfoG.gain.value = 150;
+    // Ветер: коричневый шум + очень медленное LFO
+    const brown = makeBrownNoise(ctx);
+    const lp1 = ctx.createBiquadFilter(); lp1.type = "lowpass"; lp1.frequency.value = 500;
+    const lp2 = ctx.createBiquadFilter(); lp2.type = "lowpass"; lp2.frequency.value = 700;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 180;
     lfo.connect(lfoG); lfoG.connect(lp2.frequency);
-    noise.connect(lp1); lp1.connect(lp2); lp2.connect(gainNode);
-    noise.start(); lfo.start();
-    nodes.push(noise, lp1, lp2, lfo, lfoG);
+    brown.connect(lp1); lp1.connect(lp2); lp2.connect(gainNode);
+    brown.start(); lfo.start();
+    nodes.push(brown, lp1, lp2, lfo, lfoG);
+
   } else if (type === "rain_forest") {
-    // Дождь в лесу: белый шум (дождь) + розовый шум (листья) + низкие частоты
-    const rainNoise = makeWhiteNoise(ctx);
-    const leafNoise = makePinkNoise(ctx);
-    const rFilter = ctx.createBiquadFilter(); rFilter.type = "bandpass"; rFilter.frequency.value = 3500; rFilter.Q.value = 0.6;
-    const lFilter = ctx.createBiquadFilter(); lFilter.type = "bandpass"; lFilter.frequency.value = 1000; lFilter.Q.value = 0.4;
-    const rg = ctx.createGain(); rg.gain.value = 0.6;
-    const lg = ctx.createGain(); lg.gain.value = 0.4;
-    rainNoise.connect(rFilter); rFilter.connect(rg); rg.connect(gainNode);
-    leafNoise.connect(lFilter); lFilter.connect(lg); lg.connect(gainNode);
-    rainNoise.start(); leafNoise.start();
-    nodes.push(rainNoise, leafNoise, rFilter, lFilter, rg, lg);
+    // Дождь в лесу: белый (капли) + коричневый (гул) + розовый (листья)
+    const white = makeWhiteNoise(ctx);
+    const brown = makeBrownNoise(ctx);
+    const pink = makePinkNoise(ctx);
+    const f1 = ctx.createBiquadFilter(); f1.type = "bandpass"; f1.frequency.value = 3000; f1.Q.value = 0.7;
+    const f2 = ctx.createBiquadFilter(); f2.type = "lowpass"; f2.frequency.value = 500;
+    const f3 = ctx.createBiquadFilter(); f3.type = "bandpass"; f3.frequency.value = 900; f3.Q.value = 0.4;
+    const g1 = ctx.createGain(); g1.gain.value = 0.5;
+    const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    const g3 = ctx.createGain(); g3.gain.value = 0.25;
+    white.connect(f1); f1.connect(g1); g1.connect(gainNode);
+    brown.connect(f2); f2.connect(g2); g2.connect(gainNode);
+    pink.connect(f3); f3.connect(g3); g3.connect(gainNode);
+    white.start(); brown.start(); pink.start();
+    nodes.push(white, brown, pink, f1, f2, f3, g1, g2, g3);
   }
 
   return nodes;
 }
 
-const QUOTES = [
+const ALL_QUOTES = [
   { id: 1, text: "Покой — это не отсутствие шума, а присутствие тишины внутри.", author: "" },
   { id: 2, text: "Каждый вдох — это новое начало. Каждый выдох — отпускание.", author: "" },
   { id: 3, text: "Природа не торопится, и всё же всё успевает.", author: "Лао-цзы" },
@@ -227,7 +283,103 @@ const QUOTES = [
   { id: 10, text: "Только в тишине слышен голос души.", author: "" },
   { id: 11, text: "Замедлись. Ты уже там, где нужно быть.", author: "" },
   { id: 12, text: "Луна не торопится освещать путь. Она просто светит.", author: "" },
+  { id: 13, text: "Истинная сила — в умении остановиться.", author: "" },
+  { id: 14, text: "Тот, кто умеет ждать, получает лучшее.", author: "" },
+  { id: 15, text: "Не гонись за счастьем — оно всегда здесь.", author: "Торо" },
+  { id: 16, text: "Дыхание — мост между телом и разумом.", author: "Тхить Нят Хань" },
+  { id: 17, text: "Принятие — не слабость. Это высшая мудрость.", author: "" },
+  { id: 18, text: "Каждый закат учит нас отпускать день с благодарностью.", author: "" },
+  { id: 19, text: "Река не спрашивает, куда течёт. Она просто течёт.", author: "" },
+  { id: 20, text: "В каждом мгновении — целая вечность.", author: "" },
+  { id: 21, text: "Сердце, умеющее молчать, слышит больше.", author: "" },
+  { id: 22, text: "Пусть мир будет шумным. Внутри — тишина.", author: "" },
+  { id: 23, text: "Цветок не торопится расцветать. И ты не торопись.", author: "" },
+  { id: 24, text: "Небо не держит облака. Отпусти и ты.", author: "" },
+  { id: 25, text: "Простота — это высшая утончённость.", author: "Леонардо да Винчи" },
+  { id: 26, text: "Лучшее лекарство — природа, терпение и время.", author: "" },
+  { id: 27, text: "Не нужно далеко ходить за покоем. Он внутри.", author: "" },
+  { id: 28, text: "Камень, омываемый водой, становится гладким. Так и душа.", author: "" },
+  { id: 29, text: "Жизнь — это не путь к покою. Покой — это сам путь.", author: "" },
+  { id: 30, text: "Звёзды не кричат о своём свете. Они просто светят.", author: "" },
+  { id: 31, text: "Умиротворение — это не конец пути, а то, с чем ты идёшь.", author: "" },
+  { id: 32, text: "Тихая вода подтачивает твёрдый камень.", author: "" },
+  { id: 33, text: "Настоящий покой начинается там, где заканчиваются ожидания.", author: "" },
+  { id: 34, text: "Всё, что ты ищешь снаружи, уже есть внутри.", author: "Руми" },
+  { id: 35, text: "Прислушайся к шуму дождя — он смывает всё лишнее.", author: "" },
+  { id: 36, text: "Осень не грустит об ушедшем лете. Она просто становится золотой.", author: "" },
+  { id: 37, text: "Закрой глаза. Почувствуй, как дышит земля.", author: "" },
+  { id: 38, text: "Мир принадлежит тем, кто умеет ценить тишину.", author: "" },
+  { id: 39, text: "В глубине тихого пруда отражается всё небо.", author: "" },
+  { id: 40, text: "Мудрость — это знать, когда остановиться.", author: "" },
+  { id: 41, text: "Иногда самое важное — просто быть.", author: "" },
+  { id: 42, text: "Не сопротивляйся течению — стань его частью.", author: "" },
+  { id: 43, text: "Тишина — это язык Бога. Всё остальное — перевод.", author: "Руми" },
+  { id: 44, text: "Береза не завидует дубу. Каждое дерево растёт своим путём.", author: "" },
+  { id: 45, text: "Посмотри на небо. Ты часть чего-то огромного.", author: "" },
+  { id: 46, text: "Медленнее. Ещё медленнее. Вот теперь ты начинаешь видеть.", author: "" },
+  { id: 47, text: "Лучший момент — тот, в котором ты сейчас.", author: "" },
+  { id: 48, text: "Радость — это не то, что случается. Это то, что ты выбираешь.", author: "" },
+  { id: 49, text: "Даже самая долгая ночь заканчивается рассветом.", author: "" },
+  { id: 50, text: "Ветер не знает, куда дует. И всё равно всё меняет.", author: "" },
+  { id: 51, text: "Живи так, чтобы оставлять тишину там, где был шум.", author: "" },
+  { id: 52, text: "Вода помнит берега, через которые прошла.", author: "" },
+  { id: 53, text: "Забота о себе — это не эгоизм. Это необходимость.", author: "" },
+  { id: 54, text: "Каждая трещина — это место, откуда проходит свет.", author: "Леонард Коэн" },
+  { id: 55, text: "Тёплый чай. Открытое окно. Этого достаточно.", author: "" },
+  { id: 56, text: "Настоящее богатство — это внутренний покой.", author: "Далай-лама" },
+  { id: 57, text: "Не нужно понимать всё. Нужно просто доверять.", author: "" },
+  { id: 58, text: "Первый снег падает в тишине. Так же — и самое важное.", author: "" },
+  { id: 59, text: "Горы не спешат стать выше. Они просто стоят.", author: "" },
+  { id: 60, text: "Отдыхать — значит слышать себя.", author: "" },
+  { id: 61, text: "Пусть заботы остаются снаружи. Здесь — только ты.", author: "" },
+  { id: 62, text: "Туман — это небо, решившее побыть поближе к земле.", author: "" },
+  { id: 63, text: "Маленькие радости складываются в большое счастье.", author: "" },
+  { id: 64, text: "Корни дерева не видно, но именно они держат.", author: "" },
+  { id: 65, text: "Спокойствие — не пустота. Это полнота без суеты.", author: "" },
+  { id: 66, text: "Утро всегда свежее. Дай себе начать заново.", author: "" },
+  { id: 67, text: "Море не злится на скалы. Оно просто продолжает двигаться.", author: "" },
+  { id: 68, text: "Мягкий свет вечера напоминает: день прожит.", author: "" },
+  { id: 69, text: "В природе нет ничего лишнего. И в тебе тоже.", author: "" },
+  { id: 70, text: "Тишина — это не отсутствие музыки. Это пространство между нотами.", author: "" },
+  { id: 71, text: "Когда ты спокоен, ты ясно видишь путь.", author: "" },
+  { id: 72, text: "Не нужно искать смысл. Просто живи — и смысл найдёт тебя.", author: "" },
+  { id: 73, text: "Лепесток падает — и это целое событие.", author: "" },
+  { id: 74, text: "Позволь себе быть несовершенным. Именно это делает тебя живым.", author: "" },
+  { id: 75, text: "Облако не держится за небо. Отпускай.", author: "" },
+  { id: 76, text: "Внутренний ребёнок знает, как радоваться просто так.", author: "" },
+  { id: 77, text: "Каждый шаг — уже прибытие.", author: "Тхить Нят Хань" },
+  { id: 78, text: "Дождь не знает, что он красив. Он просто идёт.", author: "" },
+  { id: 79, text: "Усталость — это сигнал: пора побыть с собой.", author: "" },
+  { id: 80, text: "Свеча не соревнуется с солнцем. Она просто горит.", author: "" },
+  { id: 81, text: "Иногда молчать вместе — это лучший разговор.", author: "" },
+  { id: 82, text: "Море всегда возвращается к берегу. Ты тоже вернёшься к себе.", author: "" },
+  { id: 83, text: "Трава не думает о том, как расти. Она просто тянется к свету.", author: "" },
+  { id: 84, text: "Покой приходит, когда перестаёшь бежать от себя.", author: "" },
+  { id: 85, text: "Пусть сегодня будет немного медленнее, чем вчера.", author: "" },
+  { id: 86, text: "Под каждым камнем — своя история. Под каждым молчанием — своя глубина.", author: "" },
+  { id: 87, text: "Живи тихо. Думай глубоко. Чувствуй полно.", author: "" },
+  { id: 88, text: "Сумерки — это когда день и ночь обнимаются.", author: "" },
+  { id: 89, text: "Природа исцеляет того, кто умеет её слушать.", author: "" },
+  { id: 90, text: "Не всё нужно понимать. Некоторые вещи нужно просто чувствовать.", author: "" },
+  { id: 91, text: "Пустая чашка может вместить новое. Пустое сердце — тоже.", author: "" },
+  { id: 92, text: "Ночь не тёмная. Она просто тихая.", author: "" },
+  { id: 93, text: "Истинный отдых — не бездействие, а прикосновение к себе.", author: "" },
+  { id: 94, text: "Нежность к себе — начало нежности ко всему миру.", author: "" },
+  { id: 95, text: "Сосна в шторм гнётся, но не ломается. Будь как сосна.", author: "" },
 ];
+
+// Ежедневная ротация: 3 фразы на каждый день года
+function getDailyQuotes() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  const startIdx = (dayOfYear * 3) % ALL_QUOTES.length;
+  const result = [];
+  for (let i = 0; i < 3; i++) {
+    result.push(ALL_QUOTES[(startIdx + i) % ALL_QUOTES.length]);
+  }
+  return result;
+}
+
+const QUOTES = ALL_QUOTES;
 
 function useFavorites(key: string) {
   const [favorites, setFavorites] = useState<number[]>(() => {
@@ -296,19 +448,41 @@ function WaterRipple({ height = 72, colors = ["#a8d4e2", "#7ab8c8", "#5aa0b0"] }
   );
 }
 
-// WaterAnimation — компактная версия для главной
-function WaterAnimation() {
-  return <WaterRipple height={48} />;
-}
 
 // ── Главная ────────────────────────────────────────────────────────────────
 function HomePage() {
-  const hour = new Date().getHours();
+  const now = new Date();
+  const hour = now.getHours();
   const greeting =
     hour < 5 ? "Тихая ночь" :
     hour < 12 ? "Доброе утро" :
     hour < 17 ? "Светлый день" :
     hour < 21 ? "Тёплый вечер" : "Тихая ночь";
+
+  const greetingEmoji = hour < 5 ? "🌙" : hour < 12 ? "🌅" : hour < 17 ? "☀️" : hour < 21 ? "🌇" : "🌙";
+
+  // Дыхание: 4 сек вдох, 4 сек выдох
+  const [breathPhase, setBreathPhase] = useState<"вдох" | "пауза" | "выдох">("вдох");
+  useEffect(() => {
+    const cycle = ["вдох" as const, "пауза" as const, "выдох" as const];
+    const durations = [4000, 1500, 4000];
+    let idx = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      setBreathPhase(cycle[idx]);
+      timer = setTimeout(() => { idx = (idx + 1) % 3; tick(); }, durations[idx]);
+    };
+    tick();
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Сезон
+  const month = now.getMonth();
+  const season = month < 3 || month === 11 ? "Зима" : month < 6 ? "Весна" : month < 9 ? "Лето" : "Осень";
+  const seasonEmoji = month < 3 || month === 11 ? "❄️" : month < 6 ? "🌸" : month < 9 ? "🌿" : "🍂";
+
+  // Ежедневные фразы
+  const dailyQuotes = getDailyQuotes();
 
   const moments = [
     { img: `${CDN}/e0a56e22-4638-483d-8d24-dd1a0f7503c9.jpg`, label: "Рассвет", quote: "Каждый рассвет — шанс начать заново" },
@@ -318,66 +492,119 @@ function HomePage() {
   ];
 
   return (
-    <div className="px-5 py-8 space-y-8 animate-fade-up">
-      <div className="text-center pt-4 space-y-2">
+    <div className="px-5 py-8 space-y-7 animate-fade-up">
+      {/* Шапка */}
+      <div className="text-center pt-2 space-y-1">
         <p className="font-body text-xs tracking-[0.25em] uppercase" style={{ color: "#b0baa8" }}>
-          {new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+          {now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}
         </p>
-        <h1 className="font-display text-5xl font-light italic" style={{ color: "#5a6e5c" }}>
-          {greeting}
+        <h1 className="font-display text-5xl font-light italic" style={{ color: "#3a5040" }}>
+          {greetingEmoji} {greeting}
         </h1>
-        <p className="font-body text-sm font-light" style={{ color: "#9aaa8e" }}>
-          Позволь себе замедлиться
+        <p className="font-body text-sm font-light" style={{ color: "#7a9a88" }}>
+          {seasonEmoji} {season} · сад покоя
         </p>
       </div>
 
-      {/* Дыхательный круг */}
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
-          <div className="absolute rounded-full animate-breathe" style={{ width: 120, height: 120, background: "rgba(122,184,138,0.09)" }} />
-          <div className="absolute rounded-full animate-breathe" style={{ width: 80, height: 80, background: "rgba(122,184,138,0.17)", animationDelay: "0.5s" }} />
-          <div className="absolute rounded-full animate-breathe" style={{ width: 40, height: 40, background: "rgba(122,184,138,0.34)", animationDelay: "1s" }} />
+      {/* Дыхательный круг — интерактивный */}
+      <div className="flex flex-col items-center gap-2">
+        <div className="relative flex items-center justify-center" style={{ width: 140, height: 140 }}>
+          <div
+            className="absolute rounded-full transition-all duration-[4000ms] ease-in-out"
+            style={{
+              width: breathPhase === "вдох" ? 136 : breathPhase === "пауза" ? 120 : 100,
+              height: breathPhase === "вдох" ? 136 : breathPhase === "пауза" ? 120 : 100,
+              background: "rgba(122,184,138,0.10)",
+            }}
+          />
+          <div
+            className="absolute rounded-full transition-all duration-[4000ms] ease-in-out"
+            style={{
+              width: breathPhase === "вдох" ? 96 : breathPhase === "пауза" ? 84 : 68,
+              height: breathPhase === "вдох" ? 96 : breathPhase === "пауза" ? 84 : 68,
+              background: "rgba(122,184,138,0.20)",
+            }}
+          />
+          <div
+            className="absolute rounded-full transition-all duration-[4000ms] ease-in-out flex items-center justify-center"
+            style={{
+              width: breathPhase === "вдох" ? 56 : breathPhase === "пауза" ? 50 : 40,
+              height: breathPhase === "вдох" ? 56 : breathPhase === "пауза" ? 50 : 40,
+              background: "rgba(122,184,138,0.38)",
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🌿</span>
+          </div>
         </div>
-        <p className="font-display text-sm italic" style={{ color: "#9aaa8e" }}>вдох · пауза · выдох</p>
+        <p className="font-display text-base italic transition-all duration-700" style={{ color: "#5a7862" }}>
+          {breathPhase}
+        </p>
+        <p className="font-body text-xs" style={{ color: "#b0baa8" }}>дыхательная практика</p>
       </div>
 
       {/* Вода */}
-      <WaterAnimation />
+      <WaterRipple height={44} colors={["#c2e0ea", "#8cc4d0", "#6aaaba"]} />
 
-      {/* Карточки */}
+      {/* Фразы дня */}
       <div>
-        <p className="font-body text-xs tracking-[0.2em] uppercase mb-4 text-center" style={{ color: "#b0baa8" }}>
-          Настроение момента
+        <p className="font-body text-xs tracking-[0.2em] uppercase mb-3" style={{ color: "#8a9888", fontWeight: 600 }}>
+          Фразы дня
+        </p>
+        <div className="space-y-2">
+          {dailyQuotes.map((q, i) => (
+            <div
+              key={q.id}
+              className="rounded-2xl px-4 py-3 opacity-0 animate-fade-up"
+              style={{
+                background: i === 0 ? "rgba(240,248,242,0.92)" : "rgba(255,255,255,0.6)",
+                border: i === 0 ? "1px solid rgba(122,184,138,0.25)" : "1px solid rgba(0,0,0,0.05)",
+                animationDelay: `${i * 0.15}s`,
+                animationFillMode: "forwards",
+              }}
+            >
+              <p className="font-display text-sm italic leading-relaxed" style={{ color: "#1a2a1e" }}>
+                {i === 0 ? "✦ " : "· "}{q.text}
+              </p>
+              {q.author && <p className="font-body text-xs mt-1" style={{ color: "#5a7862", fontWeight: 600 }}>— {q.author}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Карточки природы */}
+      <div>
+        <p className="font-body text-xs tracking-[0.2em] uppercase mb-3 text-center" style={{ color: "#b0baa8" }}>
+          Места силы
         </p>
         <div className="grid grid-cols-2 gap-3">
           {moments.map((m, i) => (
             <div
               key={m.label}
               className="rounded-2xl overflow-hidden relative opacity-0 animate-fade-up"
-              style={{ animationDelay: `${i * 0.1}s`, animationFillMode: "forwards", height: 150 }}
+              style={{ animationDelay: `${i * 0.1}s`, animationFillMode: "forwards", height: 148 }}
             >
               <img src={m.img} alt={m.label} className="w-full h-full object-cover" />
               <div
                 className="absolute inset-0 flex flex-col justify-end p-3"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 65%)" }}
+                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.52) 0%, transparent 65%)" }}
               >
                 <p className="font-display text-white text-base font-medium italic">{m.label}</p>
-                <p className="font-body text-white/80 text-[10px] leading-tight mt-0.5">{m.quote}</p>
+                <p className="font-body text-white/75 text-[10px] leading-tight mt-0.5">{m.quote}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Цитата + вода */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="px-5 pt-5 pb-3 text-center space-y-1">
-          <p className="font-display text-lg italic" style={{ color: "#3a5040" }}>
-            "Природа не торопится, и всё же всё успевает."
+      {/* Намерение дня */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(240,248,242,0.88)", border: "1px solid rgba(122,184,138,0.2)" }}>
+        <div className="px-5 pt-4 pb-3 space-y-1">
+          <p className="font-body text-xs tracking-[0.15em] uppercase" style={{ color: "#8a9888", fontWeight: 600 }}>Намерение дня</p>
+          <p className="font-display text-base italic" style={{ color: "#2a3d2e" }}>
+            Сегодня я позволяю себе замедлиться и заметить красоту в малом.
           </p>
-          <p className="font-body text-xs font-medium" style={{ color: "#6a8070" }}>— Лао-цзы</p>
         </div>
-        <WaterRipple height={56} colors={["#c2e0ea", "#8cc4d0", "#6aaaba"]} />
+        <WaterRipple height={40} colors={["#c8e8c8", "#98c898", "#78b088"]} />
       </div>
     </div>
   );
