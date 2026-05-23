@@ -9,9 +9,9 @@ const SOUNDS = [
     label: "Дождь по крыше",
     img: `${CDN}/ea9d4382-977c-4550-b8ff-7f9e60c54d25.jpg`,
     color: "#8fb8d0",
-    // Прямые ссылки freesound.org (CC0 лицензия, превью доступны без авторизации)
     urls: [
-      "https://freesound.org/data/previews/531/531947_11861866-lq.mp3",
+      "https://freesound.org/data/previews/612/612026_1648170-lq.mp3",
+      "https://freesound.org/data/previews/346/346170_5450487-lq.mp3",
       "https://freesound.org/data/previews/204/204966_1612429-lq.mp3",
     ],
   },
@@ -621,8 +621,9 @@ function SoundsPage() {
   );
 
   const stopOne = useCallback((id: string, updateState = false) => {
-    const h = handles.current[id];
+    const h = handles.current[id] as (SynthHandle & { el?: HTMLAudioElement }) | undefined;
     if (h) {
+      if (h.el) { try { h.el.pause(); h.el.src = ""; } catch (_) { /* ignore */ } }
       h.nodes.forEach(n => { try { (n as AudioBufferSourceNode).stop?.(); } catch (_) { /* ignore */ } });
       try { h.ctx.close(); } catch (_) { /* ignore */ }
       delete handles.current[id];
@@ -630,7 +631,7 @@ function SoundsPage() {
     if (updateState) setActive(prev => ({ ...prev, [id]: false }));
   }, []);
 
-  const playSound = useCallback((sound: typeof SOUNDS[0], vol: number) => {
+  const playSynth = useCallback((sound: typeof SOUNDS[0], vol: number) => {
     try {
       const ctx = new AudioContext();
       const gain = ctx.createGain();
@@ -639,10 +640,37 @@ function SoundsPage() {
       const nodes = synthesizeSound(ctx, sound.id as SoundType, gain);
       handles.current[sound.id] = { ctx, gain, nodes };
       setActive(prev => ({ ...prev, [sound.id]: true }));
-    } catch (_) {
-      // fail silently
-    }
+    } catch (_) { /* ignore */ }
   }, []);
+
+  const playSound = useCallback(async (sound: typeof SOUNDS[0], vol: number) => {
+    // Пробуем реальные MP3 с freesound
+    for (const url of sound.urls) {
+      try {
+        const el = new Audio(url);
+        el.loop = true;
+        el.volume = vol;
+        await new Promise<void>((res, rej) => {
+          const t = setTimeout(() => rej(), 5000);
+          el.oncanplaythrough = () => { clearTimeout(t); res(); };
+          el.onerror = () => { clearTimeout(t); rej(); };
+          el.load();
+        });
+        await el.play();
+        // Упаковываем HTML audio как синтез-хэндл через AudioContext
+        const ctx = new AudioContext();
+        const src = ctx.createMediaElementSource(el);
+        const gain = ctx.createGain();
+        gain.gain.value = 1;
+        src.connect(gain); gain.connect(ctx.destination);
+        handles.current[sound.id] = { ctx, gain, nodes: [src], el } as SynthHandle & { el: HTMLAudioElement };
+        setActive(prev => ({ ...prev, [sound.id]: true }));
+        return;
+      } catch (_) { continue; }
+    }
+    // Fallback: синтез
+    playSynth(sound, vol);
+  }, [playSynth]);
 
   const toggleSound = useCallback((sound: typeof SOUNDS[0]) => {
     const { id } = sound;
@@ -655,8 +683,9 @@ function SoundsPage() {
 
   const changeVolume = useCallback((id: string, vol: number) => {
     setVolumes(prev => ({ ...prev, [id]: vol }));
-    const h = handles.current[id];
-    if (h) h.gain.gain.value = vol * 0.4;
+    const h = handles.current[id] as (SynthHandle & { el?: HTMLAudioElement }) | undefined;
+    if (!h) return;
+    if (h.el) { h.el.volume = vol; } else { h.gain.gain.value = vol * 0.4; }
   }, []);
 
   const stopAll = useCallback(() => {
@@ -766,6 +795,14 @@ function QuotesPage() {
   const prev = () => setCurrent(p => (p - 1 + QUOTES.length) % QUOTES.length);
   const quote = QUOTES[current];
 
+  // Свайп
+  const touchStart = useRef(0);
+  const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStart.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) { if (diff > 0) { next(); } else { prev(); } }
+  };
+
   return (
     <div className="px-5 py-8 space-y-6 animate-fade-up">
       <div className="text-center space-y-1">
@@ -773,7 +810,12 @@ function QuotesPage() {
         <p className="font-body text-xs" style={{ color: "#b0baa8" }}>слова, которые успокаивают</p>
       </div>
 
-      <div className="rounded-3xl p-7 space-y-5" style={{ background: "rgba(245,250,246,0.92)", border: "1px solid rgba(122,184,138,0.2)" }}>
+      <div
+        className="rounded-3xl p-7 space-y-5"
+        style={{ background: "rgba(245,250,246,0.92)", border: "1px solid rgba(122,184,138,0.2)" }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="space-y-3">
           <span className="font-display text-5xl leading-none block" style={{ color: "#7ab88a", opacity: 0.6 }}>"</span>
           <p className="font-display text-2xl leading-relaxed" style={{ color: "#1a2a1e", fontStyle: "italic", fontWeight: 400 }}>
@@ -784,20 +826,27 @@ function QuotesPage() {
           )}
         </div>
         <div className="flex items-center justify-between">
-          <button onClick={prev} className="w-10 h-10 rounded-full glass flex items-center justify-center transition-opacity hover:opacity-70">
+          <button onClick={prev} className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-70" style={{ background: "rgba(122,184,138,0.15)" }}>
             <Icon name="ChevronLeft" size={16} />
           </button>
-          <div className="flex items-center gap-1">
-            {QUOTES.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)}
-                className="rounded-full transition-all duration-300"
-                style={i === current
-                  ? { width: 20, height: 6, background: "#7ab88a" }
-                  : { width: 6, height: 6, background: "rgba(0,0,0,0.15)" }}
+          {/* Счётчик вместо 95 точек */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-1 rounded-full" style={{ background: "#7ab88a" }} />
+              <p className="font-body text-xs font-semibold" style={{ color: "#5a7862" }}>
+                {current + 1} / {QUOTES.length}
+              </p>
+              <div className="w-8 h-1 rounded-full" style={{ background: "#7ab88a" }} />
+            </div>
+            {/* Мини-прогресс-бар */}
+            <div className="w-32 h-1 rounded-full" style={{ background: "rgba(0,0,0,0.08)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${((current + 1) / QUOTES.length) * 100}%`, background: "#7ab88a" }}
               />
-            ))}
+            </div>
           </div>
-          <button onClick={next} className="w-10 h-10 rounded-full glass flex items-center justify-center transition-opacity hover:opacity-70">
+          <button onClick={next} className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-70" style={{ background: "rgba(122,184,138,0.15)" }}>
             <Icon name="ChevronRight" size={16} />
           </button>
         </div>
